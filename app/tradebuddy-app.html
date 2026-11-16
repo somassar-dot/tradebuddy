@@ -1,0 +1,754 @@
+<title>Tradebuddy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Terminal-artige Kopfzeile mit Abfrage, darunter ein Analyse-Dossier in Karten (Urteil → Plan → Charts → Kennzahlen) */
+:root{
+  --bg:#f3f5f8;--panel:#ffffff;--ink:#121820;--mute:#5a6675;--line:#dfe4ea;--soft:#eef2f6;
+  --accent:#1f5fd6;--accent-ink:#ffffff;--up:#0f8a52;--dn:#cf3238;--warn:#9a6a00;
+  --c1:#d98200;--c2:#7848d0;--band:rgba(31,95,214,.07);--area:rgba(31,95,214,.09);
+  --f-display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --f-body:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1117;--panel:#151b23;--ink:#e6ebf1;--mute:#93a0b0;--line:#26303b;--soft:#1b232d;
+  --accent:#6d9bff;--accent-ink:#0d1117;--up:#34c27c;--dn:#ff6268;--warn:#e2b443;
+  --c1:#ffae3d;--c2:#b28cff;--band:rgba(109,155,255,.10);--area:rgba(109,155,255,.12);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1117;--panel:#151b23;--ink:#e6ebf1;--mute:#93a0b0;--line:#26303b;--soft:#1b232d;
+  --accent:#6d9bff;--accent-ink:#0d1117;--up:#34c27c;--dn:#ff6268;--warn:#e2b443;
+  --c1:#ffae3d;--c2:#b28cff;--band:rgba(109,155,255,.10);--area:rgba(109,155,255,.12);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px}
+.wrap{max-width:1000px;margin:0 auto;display:grid;gap:14px}
+h1,h2,h3{font-family:var(--f-display);letter-spacing:-.01em;text-wrap:balance;margin:0}
+h2{font-size:17px}h3{font-size:14px;margin-top:6px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.mute{color:var(--mute)}
+.eyebrow{font:600 11px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+/* Abfrage */
+.query{display:grid;gap:14px}
+.qtop{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:baseline;justify-content:space-between}
+.qtop h1{font-size:26px}
+form{display:grid;grid-template-columns:minmax(0,2.2fr) repeat(3,minmax(0,1fr)) auto;gap:10px;align-items:end}
+@media (max-width:760px){form{grid-template-columns:1fr 1fr}form .tick{grid-column:1/-1}form button{grid-column:1/-1}}
+label{display:grid;gap:4px;font-size:12px;color:var(--mute);font-weight:500}
+input,select{font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;min-width:0}
+input#q{font:600 18px var(--f-mono);text-transform:uppercase;letter-spacing:.04em}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:600 14px var(--f-body);border-radius:8px;border:1px solid var(--line);background:var(--soft);color:var(--ink);padding:10px 14px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);padding:11px 20px}
+button:disabled{opacity:.55;cursor:progress}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{font:600 12px var(--f-mono);padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.hint{font-size:12px;color:var(--mute)}
+/* Fortschritt */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+.step{font-size:12px;padding:7px 10px;border-radius:8px;background:var(--soft);display:flex;gap:8px;align-items:center;min-width:0}
+.step span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.step.run .dot{background:var(--accent);animation:pulse 1s infinite}.step.ok .dot{background:var(--up)}.step.err .dot{background:var(--dn)}.step.skip .dot{background:var(--warn)}
+@keyframes pulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.step.run .dot{animation:none}}
+.alert{border-left:4px solid var(--dn);padding:12px 14px;background:var(--panel);border-radius:8px}
+.alert.info{border-left-color:var(--accent)}
+/* Empty state */
+.empty{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.empty p{margin:6px 0 0;color:var(--mute);font-size:14px}
+/* Ergebnis */
+.head{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:flex-end}
+.head h2{font-size:28px}.price{font:600 26px var(--f-mono)}
+.verdict{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+.badge{font:700 18px var(--f-display);padding:10px 16px;border-radius:10px;color:#fff;letter-spacing:.02em}
+.badge.pos{background:var(--up)}.badge.neg{background:var(--dn)}.badge.neu{background:var(--warn)}
+.big{font:700 40px/1 var(--f-display)}
+.bars{display:grid;gap:8px;flex:1;min-width:220px}
+.sb{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:13px}
+.sb .track{grid-column:1/-1;height:7px;background:var(--soft);border-radius:4px;overflow:hidden}
+.sb .track i{display:block;height:100%;border-radius:4px}
+.pos-bg{background:var(--up)}.neg-bg{background:var(--dn)}.neu-bg{background:var(--warn)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:4px 18px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.kv b{font:600 13px var(--f-mono);text-align:right}
+ul.sig{list-style:none;padding:0;margin:6px 0 0}
+ul.sig li{padding:7px 0 7px 24px;position:relative;border-bottom:1px solid var(--line);font-size:14px}
+ul.sig li::before{position:absolute;left:3px;top:7px;font-size:11px}
+ul.sig li.p::before{content:"▲";color:var(--up)}ul.sig li.n::before{content:"▼";color:var(--dn)}ul.sig li.o::before{content:"●";color:var(--mute)}
+.tag{display:inline-block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-right:6px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font:13px var(--f-mono);font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left;font-family:var(--f-body)}
+th{color:var(--mute);font:600 12px var(--f-body)}
+svg.chart{width:100%;height:auto;display:block}
+.chart text{font-family:var(--f-mono)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--mute);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:3px;margin-right:6px;vertical-align:middle;border-radius:2px}
+.notes{max-width:70ch}.notes h3,.notes h4{margin:16px 0 4px}.notes p{margin:6px 0}.notes ul{margin:6px 0;padding-left:20px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.foot{font-size:12px;color:var(--mute)}
+a{color:var(--accent)}
+</style>
+
+<div class="wrap">
+  <section class="panel query" aria-labelledby="t">
+    <div class="qtop">
+      <div><div class="eyebrow">Einzelaktien-Analyst</div><h1 id="t">Tradebuddy</h1></div>
+      <div class="hint">Fundamentalanalyse + Charttechnik · Daten live über deinen Alpha-Vantage-Connector</div>
+    </div>
+    <form id="f" autocomplete="off">
+      <label class="tick">Ticker oder Firmenname<input id="q" name="q" placeholder="z. B. MSFT, NVDA, Siemens" required></label>
+      <label>Anlagehorizont<select id="hz"><option value="invest">Anleger (Fundamental 60 %)</option><option value="balanced">Ausgewogen (45/45)</option><option value="swing">Swing-Trade (Technik 65 %)</option></select></label>
+      <label>Depotgröße<input id="acc" type="number" min="100" step="100" value="10000" inputmode="numeric"></label>
+      <label>Risiko je Trade %<input id="risk" type="number" min="0.1" max="5" step="0.1" value="1" inputmode="decimal"></label>
+      <button class="primary" id="go" type="submit">Analysieren</button>
+    </form>
+    <div class="chips" id="recent"></div>
+    <div class="hint">Eine Analyse braucht bis zu 8 Abrufe; das kostenlose Alpha-Vantage-Kontingent erlaubt 25 pro Tag. Bereits geladene Daten werden 20 Stunden wiederverwendet.</div>
+  </section>
+
+  <section id="progress" class="panel" hidden aria-live="polite">
+    <h2 id="ptitle">Daten werden geladen</h2>
+    <div class="steps" id="steps" style="margin-top:10px"></div>
+  </section>
+
+  <div id="msg"></div>
+
+  <section id="empty" class="panel">
+    <h2>So arbeitet Tradebuddy</h2>
+    <div class="empty" style="margin-top:12px">
+      <div><h3>1 · Daten holen</h3><p>Tages- und Wochenkurse, Gewinn- und Verlustrechnung, Bilanz, Cashflow, Quartalszahlen, Insider-Geschäfte und der S&amp;P 500 als Vergleich.</p></div>
+      <div><h3>2 · Charttechnik</h3><p>Trend über 40-Wochen-Linie, SMA 20/50, RSI, MACD, Bollinger, ADX, Volumen, Ausbrüche, Unterstützungen und Widerstände, relative Stärke.</p></div>
+      <div><h3>3 · Fundamental</h3><p>KGV, EV/EBITDA, FCF-Rendite, Margen, ROIC, Wachstum, Verschuldung, Piotroski F-Score, Altman Z, DCF in drei Szenarien.</p></div>
+      <div><h3>4 · Urteil &amp; Plan</h3><p>Gesamtscore mit Kaufurteil, Einstiegszone, Stop-Loss, Kurszielen und Stückzahl passend zu deinem Risiko.</p></div>
+    </div>
+    <div class="chips" style="margin-top:14px"><span class="hint">Ausprobieren:</span>
+      <button class="chip" data-t="MSFT">MSFT</button><button class="chip" data-t="NVDA">NVDA</button><button class="chip" data-t="AMZN">AMZN</button><button class="chip" data-t="KO">KO</button><button class="chip" data-t="SAP">SAP</button></div>
+  </section>
+
+  <div id="out" class="wrap" style="max-width:none"></div>
+
+  <p class="foot">Keine Anlageberatung. Tradebuddy erstellt eine automatisierte, modellbasierte Analyse aus öffentlich verfügbaren Daten (Alpha Vantage). Daten können verzögert, unvollständig oder fehlerhaft sein. Jede Anlageentscheidung triffst du selbst und auf eigenes Risiko.</p>
+</div>
+
+<script>
+"use strict";
+const AV = "Alpha Vantage MCP Server";
+const $ = s => document.querySelector(s);
+const NaN_ = Number.NaN;
+const ok = v => typeof v === "number" && Number.isFinite(v);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (v, d = 2, suf = "") => ok(v) ? v.toLocaleString("de-DE", {minimumFractionDigits: d, maximumFractionDigits: d}) + suf : "–";
+const clip = (x, a, b) => Math.min(b, Math.max(a, x));
+const mean = a => { const v = a.filter(ok); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : NaN_; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const num = v => { if (typeof v === "number") return v; if (v == null) return NaN_; const s = String(v).trim(); if (!s || s === "None" || s === "-") return NaN_; const n = Number(s.replace(/,/g, "")); return Number.isFinite(n) ? n : NaN_; };
+
+/* ------------------------------------------------------------ Datenabruf */
+const CL = window.claude;
+const use = name => CL && typeof CL.use === "function" ? CL.use(name).catch(() => null) : Promise.resolve(null);
+let mcp = null;
+const mcpReady = use("mcp").then(m => (mcp = m));
+let sample = null; use("sample").then(s => (sample = s));
+let downloads = null; use("downloads").then(d => (downloads = d));
+
+class StepError extends Error { constructor(code, msg) { super(msg); this.code = code; } }
+
+function unwrap(payload) {
+  let p = payload;
+  if (typeof p === "string") { const t = p.trim(); if (t[0] === "{" || t[0] === "[") { try { p = JSON.parse(t); } catch { return t; } } else return t; }
+  if (p && typeof p === "object") {
+    if (p.error) { const m = p.error.message || JSON.stringify(p.error); throw new StepError(/premium/i.test(m) ? "premium" : (/per day|25 requests/i.test(m) ? "quota" : "av"), m); }
+    if (p.Information || p.Note) throw new StepError("quota", p.Information || p.Note);
+    if (typeof p.result === "string") return unwrap(p.result);
+    if (p.preview && p.sample_data) return unwrap(p.sample_data);
+  }
+  return p;
+}
+
+async function av(tool, input) {
+  const opts = {cache: {staleTime: 20 * 3600e3, gcTime: 7 * 24 * 3600e3}};
+  const r = await mcp.callTool(AV, tool, {...input, return_full_data: true}, opts);
+  return {data: unwrap(r.payload !== undefined ? r.payload : (r.content?.[0]?.text ?? "")), cached: !!r.cache};
+}
+
+function parseCSV(text) {
+  const lines = String(text).trim().split(/\r?\n/);
+  const head = lines.shift().split(",").map(s => s.trim().toLowerCase());
+  const ix = k => head.indexOf(k);
+  const rows = lines.map(l => { const c = l.split(","); return {d: new Date(c[0]), o: +c[ix("open")], h: +c[ix("high")], l: +c[ix("low")], c: +c[ix("close")], v: +c[ix("volume")]}; })
+    .filter(r => ok(r.c) && !isNaN(r.d));
+  rows.sort((a, b) => a.d - b.d);
+  if (rows.length < 5) throw new StepError("av", "Keine Kursdaten erhalten – Ticker prüfen.");
+  return rows;
+}
+function parseJSONSeries(obj) {
+  const key = Object.keys(obj || {}).find(k => /Time Series|Weekly|Monthly/.test(k));
+  if (!key) throw new StepError("av", "Keine Zeitreihe erhalten – Ticker prüfen.");
+  return Object.entries(obj[key]).map(([d, v]) => { const g = k => num(Object.entries(v).find(([kk]) => kk.includes(k))?.[1]); return {d: new Date(d), o: g("open"), h: g("high"), l: g("low"), c: g("close"), v: g("volume")}; }).sort((a, b) => a.d - b.d);
+}
+const series = data => typeof data === "string" ? parseCSV(data) : parseJSONSeries(data);
+const statements = obj => {
+  const conv = arr => (arr || []).map(r => { const o = {}; for (const [k, v] of Object.entries(r)) o[k] = (k === "fiscalDateEnding" || k === "reportedCurrency") ? v : num(v); return o; })
+    .sort((a, b) => String(b.fiscalDateEnding).localeCompare(String(a.fiscalDateEnding)));
+  if (!obj || typeof obj !== "object" || !(obj.annualReports || obj.quarterlyReports)) throw new StepError("av", "Keine Finanzberichte für diesen Wert.");
+  return {annual: conv(obj.annualReports), quarterly: conv(obj.quarterlyReports)};
+};
+
+/* ------------------------------------------------------------ Indikatoren */
+const smaA = (a, n) => a.map((_, i) => i < n - 1 ? NaN_ : a.slice(i - n + 1, i + 1).reduce((s, x) => s + x, 0) / n);
+function ewm(a, alpha, minP) { const out = []; let m; a.forEach((x, i) => { if (!ok(x)) { out.push(NaN_); return; } m = m === undefined ? x : alpha * x + (1 - alpha) * m; out.push(i < minP - 1 ? NaN_ : m); }); return out; }
+const emaA = (a, n) => ewm(a, 2 / (n + 1), n);
+function rsiA(c, n = 14) {
+  const up = [0], dn = [0];
+  for (let i = 1; i < c.length; i++) { const d = c[i] - c[i - 1]; up.push(Math.max(d, 0)); dn.push(Math.max(-d, 0)); }
+  up[0] = NaN_; dn[0] = NaN_;
+  const u = ewm(up.slice(1), 1 / n, n), d = ewm(dn.slice(1), 1 / n, n);
+  return [NaN_].concat(u.map((x, i) => !ok(x) ? NaN_ : (d[i] === 0 ? 100 : 100 - 100 / (1 + x / d[i]))));
+}
+function macdA(c) { const f = emaA(c, 12), s = emaA(c, 26); const line = c.map((_, i) => f[i] - s[i]); const valid = line.findIndex(ok); const sig = Array(valid).fill(NaN_).concat(ewm(line.slice(valid), 2 / 10, 9)); return {line, sig, hist: line.map((x, i) => x - sig[i])}; }
+const trA = r => r.map((x, i) => i === 0 ? x.h - x.l : Math.max(x.h - x.l, Math.abs(x.h - r[i - 1].c), Math.abs(x.l - r[i - 1].c)));
+const atrA = (r, n = 14) => ewm(trA(r), 1 / n, n);
+function adxA(r, n = 14) {
+  const pdm = [0], mdm = [0];
+  for (let i = 1; i < r.length; i++) { const up = r[i].h - r[i - 1].h, dn = r[i - 1].l - r[i].l; pdm.push(up > dn && up > 0 ? up : 0); mdm.push(dn > up && dn > 0 ? dn : 0); }
+  const tr = ewm(trA(r), 1 / n, n), p = ewm(pdm, 1 / n, n), m = ewm(mdm, 1 / n, n);
+  const pdi = p.map((x, i) => 100 * x / tr[i]), mdi = m.map((x, i) => 100 * x / tr[i]);
+  const dx = pdi.map((x, i) => 100 * Math.abs(x - mdi[i]) / (x + mdi[i] || NaN_));
+  const first = dx.findIndex(ok);
+  return {adx: Array(Math.max(first, 0)).fill(NaN_).concat(ewm(dx.slice(Math.max(first, 0)), 1 / n, n)), pdi, mdi};
+}
+function bollA(c, n = 20, k = 2) { const m = smaA(c, n); const sd = c.map((_, i) => { if (i < n - 1) return NaN_; const w = c.slice(i - n + 1, i + 1); const mu = m[i]; return Math.sqrt(w.reduce((s, x) => s + (x - mu) ** 2, 0) / n); }); return {up: m.map((x, i) => x + k * sd[i]), mid: m, lo: m.map((x, i) => x - k * sd[i])}; }
+function stochA(r, n = 14) { const k = r.map((_, i) => { if (i < n - 1) return NaN_; const w = r.slice(i - n + 1, i + 1); const ll = Math.min(...w.map(x => x.l)), hh = Math.max(...w.map(x => x.h)); return 100 * (r[i].c - ll) / ((hh - ll) || NaN_); }); return {k, d: smaA(k.map(x => ok(x) ? x : 0), 3).map((x, i) => i < n + 1 ? NaN_ : x)}; }
+const last = a => { for (let i = a.length - 1; i >= 0; i--) if (ok(a[i])) return a[i]; return NaN_; };
+const pct = (a, b) => ok(a) && ok(b) && b ? (a / b - 1) * 100 : NaN_;
+
+function adjustSplits(rows) {
+  const r = rows.map(x => ({...x}));
+  for (let i = 1; i < r.length; i++) {
+    const ratio = r[i - 1].c / r[i].o;
+    const cands = ratio > 1.8 ? [2, 3, 4, 5, 7, 8, 10, 15, 20, 1.5] : ratio < 0.55 ? [2, 3, 4, 5, 8, 10, 20] : [];
+    const rr = ratio > 1 ? ratio : 1 / ratio;
+    const c = cands.find(c => Math.abs(rr / c - 1) < 0.06);
+    if (c) for (let j = 0; j < i; j++) { const f = ratio > 1 ? 1 / c : c; r[j].o *= f; r[j].h *= f; r[j].l *= f; r[j].c *= f; r[j].v /= f; }
+  }
+  return r;
+}
+
+function levels(rows, price, tol, w) {
+  const pts = [];
+  for (let i = w; i < rows.length - w; i++) {
+    const win = rows.slice(i - w, i + w + 1);
+    if (rows[i].h === Math.max(...win.map(x => x.h))) pts.push(rows[i].h);
+    if (rows[i].l === Math.min(...win.map(x => x.l))) pts.push(rows[i].l);
+  }
+  pts.sort((a, b) => a - b);
+  const cl = [];
+  for (const p of pts) { const lastC = cl[cl.length - 1]; if (lastC && Math.abs(p - mean(lastC)) <= tol) lastC.push(p); else cl.push([p]); }
+  return cl.map(c => [mean(c), c.length]);
+}
+function mergeLv(list, desc, tol) {
+  list.sort((a, b) => desc ? b[0] - a[0] : a[0] - b[0]);
+  const out = [];
+  for (const [l, t] of list) { const o = out[out.length - 1]; if (o && Math.abs(l - o[0]) <= tol) { out[out.length - 1] = [(o[0] * o[1] + l * t) / (o[1] + t), o[1] + t]; } else out.push([l, t]); }
+  return out;
+}
+function divergence(c, o, bull, lb = 40) {
+  if (c.length < lb) return false;
+  const cs = c.slice(-lb), os = o.slice(-lb), h = lb / 2;
+  const idx = (arr, a, b, f) => { let best = a; for (let i = a; i < b; i++) if (f(arr[i], arr[best])) best = i; return best; };
+  if (bull) { const a = idx(cs, 0, h, (x, y) => x < y), b = idx(cs, h, lb, (x, y) => x < y); return cs[b] < cs[a] && os[b] > os[a]; }
+  const a = idx(cs, 0, h, (x, y) => x > y), b = idx(cs, h, lb, (x, y) => x > y); return cs[b] > cs[a] && os[b] < os[a];
+}
+
+/* ------------------------------------------------------------ Charttechnik */
+function technicals(daily, weekly, bench) {
+  weekly = weekly ? adjustSplits(weekly) : null; daily = daily ? adjustSplits(daily) : null;
+  const base = daily || weekly, price = base[base.length - 1].c;
+  const T = {price, date: base[base.length - 1].d, ind: {}, perf: {}, sig: [], trend: "seitwärts", series: {}};
+  const ind = T.ind, S = (area, text, w) => T.sig.push([area, text, w]);
+  let lt = 50, mt = 50, mom = 50, vol = 50, st = 50, rs = 50;
+  if (weekly && weekly.length >= 45) {
+    const wc = weekly.map(x => x.c), s10 = smaA(wc, 10), s40 = smaA(wc, 40);
+    ind.sma10w = last(s10); ind.sma40w = last(s40);
+    const slope = pct(ind.sma40w, s40[s40.length - 5]); ind.slope40 = slope;
+    ind.rsi14w = last(rsiA(wc));
+    const l52 = weekly.slice(-52); ind.high52 = Math.max(...l52.map(x => x.h)); ind.low52 = Math.min(...l52.map(x => x.l));
+    ind.dist52 = pct(price, ind.high52);
+    for (const [lbl, n] of [["1M", 4], ["3M", 13], ["6M", 26], ["1J", 52], ["3J", 156]]) if (wc.length > n) T.perf[lbl] = pct(price, wc[wc.length - n - 1]);
+    const yr = base[base.length - 1].d.getFullYear(), prev = weekly.filter(x => x.d.getFullYear() < yr);
+    if (prev.length) T.perf.YTD = pct(price, prev[prev.length - 1].c);
+    if (price > ind.sma40w && ind.sma10w > ind.sma40w && slope > 0) { lt = 85; T.trend = "Aufwärtstrend"; S("Trend", "Langfristiger Aufwärtstrend: Kurs > SMA10w > SMA40w (≈200-Tage-Linie), SMA40w steigt", 2); }
+    else if (price < ind.sma40w && ind.sma10w < ind.sma40w && slope < 0) { lt = 15; T.trend = "Abwärtstrend"; S("Trend", "Langfristiger Abwärtstrend: Kurs < SMA10w < SMA40w, SMA40w fällt", -2); }
+    else if (price > ind.sma40w) { lt = 62; S("Trend", "Kurs über der 40-Wochen-Linie (≈200-Tage-Linie)", 1); }
+    else { lt = 38; S("Trend", "Kurs unter der 40-Wochen-Linie (≈200-Tage-Linie)", -1); }
+    const above = s10.map((x, i) => ok(x) && ok(s40[i]) ? (x > s40[i] ? 1 : 0) : NaN_);
+    for (let i = above.length - 8; i < above.length; i++) { if (ok(above[i]) && ok(above[i - 1]) && above[i] !== above[i - 1]) { if (above[i]) S("Trend", "Golden Cross (SMA10w über SMA40w) in den letzten 8 Wochen", 1.5); else S("Trend", "Death Cross (SMA10w unter SMA40w) in den letzten 8 Wochen", -1.5); } }
+    if (ind.dist52 > -3) S("Struktur", "Notiert nahe 52-Wochen-Hoch – relative Stärke", 1);
+    else if (ind.dist52 < -35) S("Struktur", `${fmt(ind.dist52, 0)} % unter 52-Wochen-Hoch – angeschlagener Chart`, -1);
+    T.series.weekly = weekly.slice(-156).map((x, i, arr) => { const j = weekly.length - arr.length + i; return {d: x.d, c: x.c, s10: s10[j], s40: s40[j]}; });
+  }
+  if (daily && daily.length >= 35) {
+    const c = daily.map(x => x.c), s20 = smaA(c, 20), s50 = smaA(c, 50), e21 = emaA(c, 21), r = rsiA(c), m = macdA(c), bb = bollA(c), a = atrA(daily), ax = adxA(daily), sk = stochA(daily);
+    Object.assign(ind, {sma20: last(s20), sma50: last(s50), ema21: last(e21), rsi14: last(r), macd: last(m.line), macdSig: last(m.sig), macdHist: last(m.hist), bbUp: last(bb.up), bbLo: last(bb.lo), atr: last(a), adx: last(ax.adx), pdi: last(ax.pdi), mdi: last(ax.mdi), stK: last(sk.k), stD: last(sk.d)});
+    ind.atrPct = ind.atr / price * 100;
+    if (c.length > 5) T.perf["1W"] = pct(price, c[c.length - 6]);
+    let pts = price > ind.sma20 ? 1 : -1;
+    if (ok(ind.sma50)) { pts += price > ind.sma50 ? 1 : -1; pts += ind.sma20 > ind.sma50 ? 1 : -1;
+      if (price > ind.sma20 && ind.sma20 > ind.sma50) S("Trend", "Kurzfristig intakt: Kurs > SMA20 > SMA50", 1);
+      else if (price < ind.sma20 && ind.sma20 < ind.sma50) S("Trend", "Kurzfristig schwach: Kurs < SMA20 < SMA50", -1); }
+    mt = 50 + pts * 16;
+    if (ind.adx > 25) { const up = ind.pdi > ind.mdi; S("Trend", `ADX ${fmt(ind.adx, 0)}: ausgeprägter Trend ${up ? "aufwärts" : "abwärts"}`, up ? 1 : -1); }
+    else if (ind.adx < 18) S("Trend", `ADX ${fmt(ind.adx, 0)}: kein klarer Trend (Range-Markt)`, 0);
+    const rv = ind.rsi14;
+    if (rv > 70) { S("Momentum", `RSI ${fmt(rv, 0)} – überkauft, Rücksetzergefahr`, -1); mom = 45; }
+    else if (rv < 30) { S("Momentum", `RSI ${fmt(rv, 0)} – überverkauft, Rebound-Chance`, 1); mom = 55; }
+    else if (rv >= 50) { S("Momentum", `RSI ${fmt(rv, 0)} – bullische Zone`, 0.5); mom = 68; }
+    else { S("Momentum", `RSI ${fmt(rv, 0)} – bärische Zone`, -0.5); mom = 35; }
+    let crossUp = false, crossDn = false;
+    for (let i = c.length - 5; i < c.length; i++) { const p0 = m.line[i - 1] > m.sig[i - 1], p1 = m.line[i] > m.sig[i]; if (ok(m.sig[i - 1]) && p1 !== p0) { if (p1) crossUp = true; else crossDn = true; } }
+    if (crossUp) { S("Momentum", "MACD-Kaufsignal (Kreuzung über Signallinie) in den letzten 5 Tagen", 1); mom += 10; }
+    else if (crossDn) { S("Momentum", "MACD-Verkaufssignal in den letzten 5 Tagen", -1); mom -= 10; }
+    else mom += ind.macdHist > 0 ? 5 : -5;
+    if (divergence(c, r, true)) { S("Momentum", "Bullische RSI-Divergenz (tieferes Tief im Kurs, höheres Tief im RSI)", 1.5); mom += 10; }
+    if (divergence(c, r, false)) { S("Momentum", "Bärische RSI-Divergenz (höheres Hoch im Kurs, tieferes Hoch im RSI)", -1.5); mom -= 10; }
+    mom = clip(mom, 0, 100);
+    const v20 = mean(daily.slice(-20).map(x => x.v)); ind.volRatio = daily[daily.length - 1].v / v20;
+    let upv = 0, dnv = 0; for (let i = c.length - 20; i < c.length; i++) { if (c[i] > c[i - 1]) upv += daily[i].v; else if (c[i] < c[i - 1]) dnv += daily[i].v; }
+    ind.udv = dnv ? upv / dnv : NaN_;
+    vol = ok(ind.udv) ? 50 + clip((ind.udv - 1) * 40, -30, 30) : 50;
+    if (ind.udv > 1.3) S("Volumen", `Akkumulation: Volumen an Plus-Tagen ${fmt(ind.udv, 1)}× Minus-Tage (20 T)`, 1);
+    else if (ind.udv < 0.75) S("Volumen", `Distribution: Volumen an Minus-Tagen überwiegt (${fmt(ind.udv, 1)}×)`, -1);
+    if (ind.volRatio > 1.8) { const up = c[c.length - 1] > c[c.length - 2]; S("Volumen", `Volumenspike ${fmt(ind.volRatio, 1)}× Ø20 an einem ${up ? "Plus" : "Minus"}tag`, up ? 1 : -1); }
+    vol = clip(vol, 0, 100);
+    const prevH = Math.max(...daily.slice(-21, -1).map(x => x.h)), prevL = Math.min(...daily.slice(-21, -1).map(x => x.l));
+    if (price > prevH) { S("Struktur", "Ausbruch über das 20-Tage-Hoch", 1.5); st += 20; } else if (price < prevL) { S("Struktur", "Bruch unter das 20-Tage-Tief", -1.5); st -= 20; }
+    const bw = bb.up.map((x, i) => (x - bb.lo[i]) / bb.mid[i]).filter(ok);
+    if (bw.length > 60) { const sorted = bw.slice(-100).slice().sort((a, b) => a - b); if (bw[bw.length - 1] <= sorted[Math.floor(sorted.length * 0.15)]) S("Volatilität", "Bollinger-Squeeze: Volatilität sehr niedrig – größere Bewegung wahrscheinlich", 0); }
+    if (price > ind.bbUp) S("Volatilität", "Schlusskurs über oberem Bollinger-Band (stark, aber gedehnt)", 0); else if (price < ind.bbLo) S("Volatilität", "Schlusskurs unter unterem Bollinger-Band (schwach, aber gedehnt)", 0);
+    const ext = (price / ind.ema21 - 1) / (ind.atrPct / 100); ind.ext = ext;
+    if (ext > 3) { S("Struktur", `Kurs ${fmt(ext, 1)} ATR über EMA21 – überdehnt, kein guter Einstieg`, -1); st -= 10; }
+    else if (ext >= -1 && ext <= 1 && T.trend === "Aufwärtstrend") { S("Struktur", "Kurs nahe EMA21 im Aufwärtstrend – klassische Einstiegszone", 1); st += 10; }
+    st = clip(st, 0, 100);
+    T.series.daily = daily.map((x, i) => ({...x, s20: s20[i], s50: s50[i], bu: bb.up[i], bl: bb.lo[i], rsi: r[i], macd: m.line[i], sig: m.sig[i], hist: m.hist[i]})).slice(-100);
+  }
+  const atr = ind.atr || (weekly ? last(atrA(weekly)) / 2.2 : price * 0.02);
+  const tol = Math.max(atr * 0.6, price * 0.006);
+  let sup = [], res = [];
+  for (const [rows, w] of [[daily, 5], [weekly ? weekly.slice(-104) : null, 3]]) if (rows) for (const lv of levels(rows, price, tol, w)) (lv[0] < price ? sup : res).push(lv);
+  T.sup = mergeLv(sup, true, tol).slice(0, 5); T.res = mergeLv(res, false, tol).slice(0, 5);
+  if (!T.res.length && ind.high52) T.res = [[ind.high52, 1]];
+  if (T.sup.length && (price - T.sup[0][0]) / atr < 1) { S("Struktur", `Kurs direkt an Unterstützung ${fmt(T.sup[0][0])} (enges Stop-Risiko)`, 0.5); st = Math.min(100, st + 5); }
+  if (bench && weekly && bench.length > 30) {
+    const bm = new Map(adjustSplits(bench).map(x => [x.d.toISOString().slice(0, 10), x.c]));
+    const j = weekly.map(x => [x.c, bm.get(x.d.toISOString().slice(0, 10))]).filter(x => ok(x[1]));
+    if (j.length > 27) {
+      const n = j.length - 1, r13 = pct(j[n][0], j[n - 13][0]) - pct(j[n][1], j[n - 13][1]), r26 = pct(j[n][0], j[n - 26][0]) - pct(j[n][1], j[n - 26][1]);
+      ind.rs3 = r13; ind.rs6 = r26; rs = clip(50 + r13 * 1.5 + r26 * 0.75, 0, 100);
+      if (r13 > 0 && r26 > 0) S("Rel. Stärke", `Outperformance vs. S&P 500: ${fmt(r13, 1)} PP (3M), ${fmt(r26, 1)} PP (6M)`, 1);
+      else if (r13 < 0 && r26 < 0) S("Rel. Stärke", `Underperformance vs. S&P 500: ${fmt(r13, 1)} PP (3M), ${fmt(r26, 1)} PP (6M)`, -1);
+    }
+  }
+  T.sub = {"Langfristtrend": lt, "Mittelfristtrend": mt, "Momentum": mom, "Volumen": vol, "Struktur": st, "Relative Stärke": rs};
+  const W = {"Langfristtrend": .30, "Mittelfristtrend": .20, "Momentum": .20, "Volumen": .10, "Struktur": .12, "Relative Stärke": .08};
+  T.score = Object.entries(W).reduce((s, [k, w]) => s + T.sub[k] * w, 0);
+  T.atr = atr;
+  return T;
+}
+
+/* ------------------------------------------------------------ Fundamental */
+const g = (rep, ...keys) => { if (!rep) return NaN_; for (const k of keys) if (ok(rep[k])) return rep[k]; return NaN_; };
+const dv = (a, b) => ok(a) && ok(b) && b !== 0 ? a / b : NaN_;
+const ttm = (q, keys, off = 0) => { const s = q.slice(off, off + 4); if (s.length < 4) return NaN_; const v = s.map(r => g(r, ...keys)); return v.every(ok) ? v.reduce((a, b) => a + b, 0) : NaN_; };
+const cagr = (n, o, y) => ok(n) && ok(o) && n > 0 && o > 0 ? ((n / o) ** (1 / y) - 1) * 100 : NaN_;
+const scale = (x, bad, good) => ok(x) ? clip((x - bad) / (good - bad), 0, 1) * 100 : NaN_;
+function dcf(fcf, sh, nd, gr, wacc = .09, term = .025, years = 10) {
+  if (!ok(fcf) || !ok(sh) || fcf <= 0 || sh <= 0 || wacc <= term) return NaN_;
+  let pv = 0, cash = fcf;
+  for (let y = 1; y <= years; y++) { const gg = gr - (gr - term) * (y - 1) / (years - 1); cash *= 1 + gg; pv += cash / (1 + wacc) ** y; }
+  pv += cash * (1 + term) / (wacc - term) / (1 + wacc) ** years;
+  return (pv - nd) / sh;
+}
+function reverseDcf(price, fcf, sh, nd, wacc = .09) { if (!ok(fcf) || fcf <= 0) return NaN_; let lo = -.2, hi = .6, mid = 0; for (let i = 0; i < 60; i++) { mid = (lo + hi) / 2; const v = dcf(fcf, sh, nd, mid, wacc); if (!ok(v)) return NaN_; if (v < price) lo = mid; else hi = mid; } return mid * 100; }
+
+function fundamentals(D, price, extra) {
+  const F = {m: {}, sub: {}, score: NaN_, sig: [], pio: {score: NaN_, details: {}}, alt: {z: NaN_, zone: "n/a"}, dcf: null, fv: {}, hist: [], cur: "USD"};
+  const inc = D.income, bal = D.balance, cf = D.cashflow;
+  if (!inc || !(inc.quarterly.length || inc.annual.length)) { F.sig.push(["Daten", "Keine Finanzberichte verfügbar – Fundamental-Score nicht berechenbar", 0]); return F; }
+  const iq = inc.quarterly, ia = inc.annual, bq = bal?.quarterly || [], ba = bal?.annual || [], cq = cf?.quarterly || [], ca = cf?.annual || [];
+  F.cur = (iq[0] || ia[0]).reportedCurrency || "USD";
+  const b0 = bq[0] || ba[0] || {};
+  const useQ = iq.length >= 4 && cq.length >= 4;
+  const T = (q, a, keys, off = 0) => { let v = useQ ? ttm(q, keys, off) : NaN_; if (!ok(v) && a[Math.floor(off / 4)]) v = g(a[Math.floor(off / 4)], ...keys); return v; };
+  const rev = T(iq, ia, ["totalRevenue"]), revP = T(iq, ia, ["totalRevenue"], 4), gp = T(iq, ia, ["grossProfit"]), op = T(iq, ia, ["operatingIncome"]);
+  const ni = T(iq, ia, ["netIncome"]), niP = T(iq, ia, ["netIncome"], 4), ebit = T(iq, ia, ["ebit", "operatingIncome"]);
+  let ebitda = T(iq, ia, ["ebitda"]); if (!ok(ebitda) && ok(ebit)) ebitda = ebit + T(iq, ia, ["depreciationAndAmortization"]);
+  const intE = T(iq, ia, ["interestExpense"]), tax = T(iq, ia, ["incomeTaxExpense"]), pre = T(iq, ia, ["incomeBeforeTax"]);
+  const ocf = T(cq, ca, ["operatingCashflow"]), capex = T(cq, ca, ["capitalExpenditures"]), sbc = T(cq, ca, ["stockBasedCompensation"]);
+  const divs = T(cq, ca, ["dividendPayout", "dividendPayoutCommonStock"]);
+  let buy = T(cq, ca, ["paymentsForRepurchaseOfCommonStock", "paymentsForRepurchaseOfEquity"]);
+  if (!ok(buy)) { const pr = T(cq, ca, ["proceedsFromRepurchaseOfEquity"]); buy = ok(pr) && pr < 0 ? -pr : NaN_; }
+  const fcf = ok(ocf) && ok(capex) ? ocf - Math.abs(capex) : ocf;
+  const fcfP = useQ && cq.length >= 8 ? ttm(cq, ["operatingCashflow"], 4) - Math.abs(ttm(cq, ["capitalExpenditures"], 4) || 0) : NaN_;
+  const sh = g(b0, "commonStockSharesOutstanding"), mcap = price * sh;
+  let debt = g(b0, "shortLongTermDebtTotal"); if (!ok(debt)) debt = [g(b0, "shortTermDebt", "currentDebt", "currentLongTermDebt"), g(b0, "longTermDebt", "longTermDebtNoncurrent")].filter(ok).reduce((a, b) => a + b, 0);
+  let cash = g(b0, "cashAndShortTermInvestments", "cashAndCashEquivalentsAtCarryingValue"); const sti = g(b0, "shortTermInvestments");
+  if (ok(cash) && ok(sti) && Math.abs(cash - g(b0, "cashAndCashEquivalentsAtCarryingValue")) < 1) cash += sti; if (!ok(cash)) cash = 0;
+  const nd = debt - cash, ev = mcap + nd, eq = g(b0, "totalShareholderEquity");
+  const eqP = bq[4] ? g(bq[4], "totalShareholderEquity") : (ba[1] ? g(ba[1], "totalShareholderEquity") : eq);
+  const ta = g(b0, "totalAssets"), eps = dv(ni, sh);
+  const tr = ok(dv(tax, pre)) ? clip(dv(tax, pre), 0, .35) : .21, inv = debt + (ok(eq) ? eq : 0) - cash;
+  const m = F.m;
+  Object.assign(m, {
+    "Marktkapitalisierung (Mrd.)": mcap / 1e9, "Enterprise Value (Mrd.)": ev / 1e9, "Nettoverschuldung (Mrd.)": nd / 1e9,
+    "Umsatz TTM (Mrd.)": rev / 1e9, "Nettogewinn TTM (Mrd.)": ni / 1e9, "Free Cashflow TTM (Mrd.)": fcf / 1e9, "EPS TTM": eps,
+    "KGV (P/E)": ni > 0 ? dv(mcap, ni) : NaN_, "KUV (P/S)": dv(mcap, rev), "KBV (P/B)": eq > 0 ? dv(mcap, eq) : NaN_,
+    "EV/EBITDA": ebitda > 0 ? dv(ev, ebitda) : NaN_, "FCF-Rendite %": dv(fcf, mcap) * 100,
+    "Dividendenrendite %": ok(divs) ? Math.abs(divs) / mcap * 100 : 0, "Aktionärsrendite %": dv((ok(divs) ? Math.abs(divs) : 0) + (ok(buy) ? Math.abs(buy) : 0), mcap) * 100,
+    "Bruttomarge %": dv(gp, rev) * 100, "Operative Marge %": dv(op, rev) * 100, "Nettomarge %": dv(ni, rev) * 100, "FCF-Marge %": dv(fcf, rev) * 100,
+    "ROE %": eq > 0 ? dv(ni, (eq + eqP) / 2) * 100 : NaN_, "ROA %": dv(ni, ta) * 100, "ROIC %": inv > 0 ? dv(ebit * (1 - tr), inv) * 100 : NaN_,
+    "Cash Conversion (OCF/NI)": ni > 0 ? dv(ocf, ni) : NaN_, "SBC/Umsatz %": dv(sbc, rev) * 100,
+    "Umsatzwachstum TTM %": (dv(rev, revP) - 1) * 100, "Gewinnwachstum TTM %": niP > 0 ? (dv(ni, niP) - 1) * 100 : NaN_, "FCF-Wachstum TTM %": fcfP > 0 ? (dv(fcf, fcfP) - 1) * 100 : NaN_,
+    "Nettoverschuldung/EBITDA": ebitda > 0 ? dv(nd, ebitda) : NaN_, "Verschuldungsgrad (D/E)": eq > 0 ? dv(debt, eq) : NaN_,
+    "Current Ratio": dv(g(b0, "totalCurrentAssets"), g(b0, "totalCurrentLiabilities")),
+    "Zinsdeckung (EBIT/Zins)": intE > 0 ? dv(ebit, intE) : (ebit > 0 ? 99 : NaN_),
+  });
+  if (ia.length >= 4) m["Umsatz-CAGR 3J %"] = cagr(g(ia[0], "totalRevenue"), g(ia[3], "totalRevenue"), 3);
+  const ae = D.earnings?.annualEarnings || [];
+  m["EPS-CAGR 3J %"] = ae.length >= 4 ? cagr(num(ae[0].reportedEPS), num(ae[3].reportedEPS), 3) : (ia.length >= 4 ? cagr(g(ia[0], "netIncome"), g(ia[3], "netIncome"), 3) : NaN_);
+  if (iq.length >= 5) m["Umsatz letztes Quartal YoY %"] = (dv(g(iq[0], "totalRevenue"), g(iq[4], "totalRevenue")) - 1) * 100;
+  const eg = m["EPS-CAGR 3J %"]; m["PEG"] = eg > 0 ? dv(m["KGV (P/E)"], eg) : NaN_;
+  const om = ia.slice(0, 4).map(a => dv(g(a, "operatingIncome"), g(a, "totalRevenue")) * 100);
+  if (om.filter(ok).length >= 3) m["Op.-Margen-Trend 3J (PP)"] = om[0] - om[om.length - 1];
+  const qe = D.earnings?.quarterlyEarnings || [];
+  const sp = qe.slice(0, 8).map(q => num(q.surprisePercentage)).filter(ok);
+  if (sp.length) { m["Beat-Quote 8Q %"] = 100 * sp.filter(x => x > 0).length / sp.length; m["Ø Überraschung 8Q %"] = mean(sp); }
+  F.hist = ia.slice(0, 6).map((a, i) => ({jahr: String(a.fiscalDateEnding).slice(0, 4), umsatz: g(a, "totalRevenue") / 1e9, gewinn: g(a, "netIncome") / 1e9, fcf: ca[i] ? (g(ca[i], "operatingCashflow") - Math.abs(g(ca[i], "capitalExpenditures"))) / 1e9 : NaN_})).reverse();
+  // Piotroski
+  if (ia.length >= 2 && ba.length >= 3 && ca.length >= 1) {
+    const [i0, i1] = ia, [b_0, b_1, b_2] = ba, c0 = ca[0];
+    const ta0 = g(b_0, "totalAssets"), ta1 = g(b_1, "totalAssets"), ta2 = g(b_2, "totalAssets");
+    const roa0 = dv(g(i0, "netIncome"), (ta0 + ta1) / 2), roa1 = dv(g(i1, "netIncome"), (ta1 + ta2) / 2), cfo = g(c0, "operatingCashflow");
+    const lev0 = dv(g(b_0, "longTermDebt", "longTermDebtNoncurrent"), ta0), lev1 = dv(g(b_1, "longTermDebt", "longTermDebtNoncurrent"), ta1);
+    const cr0 = dv(g(b_0, "totalCurrentAssets"), g(b_0, "totalCurrentLiabilities")), cr1 = dv(g(b_1, "totalCurrentAssets"), g(b_1, "totalCurrentLiabilities"));
+    const s0 = g(b_0, "commonStockSharesOutstanding"), s1 = g(b_1, "commonStockSharesOutstanding");
+    const gm0 = dv(g(i0, "grossProfit"), g(i0, "totalRevenue")), gm1 = dv(g(i1, "grossProfit"), g(i1, "totalRevenue"));
+    const at0 = dv(g(i0, "totalRevenue"), ta1), at1 = dv(g(i1, "totalRevenue"), ta2);
+    const t = [roa0 > 0, cfo > 0, roa0 > roa1, cfo > g(i0, "netIncome"), (ok(lev0) && ok(lev1) && lev0 <= lev1) || (!ok(lev0) && !ok(lev1)), cr0 > cr1, ok(s0) && ok(s1) && s0 <= s1 * 1.005, gm0 > gm1, at0 > at1];
+    F.pio.score = t.filter(Boolean).length;
+  }
+  // Altman Z
+  const wc = g(b0, "totalCurrentAssets") - g(b0, "totalCurrentLiabilities"), tl = g(b0, "totalLiabilities"), re = ok(g(b0, "retainedEarnings")) ? g(b0, "retainedEarnings") : 0;
+  if ([ta, tl, wc, ebit, rev, mcap].every(ok) && ta) { const z = 1.2 * wc / ta + 1.4 * re / ta + 3.3 * ebit / ta + 0.6 * mcap / Math.max(tl, 1) + rev / ta; F.alt = {z, zone: z > 2.99 ? "sicher" : z > 1.81 ? "Grauzone" : "Gefahrenzone"}; }
+  // DCF & Fair Value
+  let bg = mean([m["Umsatz-CAGR 3J %"], eg, m["Umsatzwachstum TTM %"]]); bg = clip((ok(bg) ? bg : 5) / 100, -.02, .20);
+  const wacc = extra.wacc || .09, fcfN = ok(fcf) ? fcf - (ok(sbc) ? sbc : 0) : NaN_;
+  const sc = {"Bär": [Math.max(bg - .05, -.03), wacc + .01], "Basis": [bg, wacc], "Bulle": [bg + .04, wacc - .005]};
+  F.dcf = {fcf: fcfN / 1e9, sbc: ok(sbc), sc: {}, implied: reverseDcf(price, fcfN, sh, nd, wacc)};
+  for (const [k, [gr, w]] of Object.entries(sc)) F.dcf.sc[k] = {g: gr * 100, w: w * 100, v: dcf(fcfN, sh, nd, gr, w)};
+  const fairPE = clip(8.5 + 1.5 * (ok(eg) ? eg : bg * 100), 8, 35), peV = eps > 0 ? eps * fairPE : NaN_;
+  const comps = {"DCF (Basis)": F.dcf.sc.Basis.v, "Faires KGV": peV}; if (ok(extra.target)) comps["Analysten-Kursziel"] = extra.target;
+  const wts = {"DCF (Basis)": .5, "Faires KGV": .3, "Analysten-Kursziel": .2};
+  let nmr = 0, dnm = 0; for (const [k, v] of Object.entries(comps)) if (ok(v)) { nmr += v * wts[k]; dnm += wts[k]; }
+  const fv = dnm ? nmr / dnm : NaN_;
+  F.fv = {comps, fairPE, fv, up: ok(fv) ? (fv / price - 1) * 100 : NaN_};
+  // Teilscores
+  F.sub = {
+    "Bewertung": mean([scale(m["KGV (P/E)"], 45, 10), scale(m["EV/EBITDA"], 30, 7), scale(m["FCF-Rendite %"], 0, 8), scale(m["PEG"], 3.5, .8), scale(F.fv.up, -40, 40)]),
+    "Qualität": mean([scale(m["ROIC %"], 3, 25), scale(m["Operative Marge %"], 0, 30), scale(m["Bruttomarge %"], 15, 65), scale(m["Cash Conversion (OCF/NI)"], .5, 1.2), scale(m["SBC/Umsatz %"], 10, 1), ok(F.pio.score) ? F.pio.score / 9 * 100 : NaN_]),
+    "Wachstum": mean([scale(m["Umsatzwachstum TTM %"], -5, 20), scale(m["Umsatz-CAGR 3J %"], -3, 18), scale(eg, -5, 25), scale(m["Gewinnwachstum TTM %"], -10, 30), scale(m["Op.-Margen-Trend 3J (PP)"], -5, 5)]),
+    "Bilanz": mean([scale(m["Nettoverschuldung/EBITDA"], 4, 0), scale(m["Current Ratio"], .6, 2), scale(m["Zinsdeckung (EBIT/Zins)"], 2, 15), {"sicher": 100, "Grauzone": 50, "Gefahrenzone": 10}[F.alt.zone] ?? NaN_]),
+    "Gewinndynamik": mean([scale(m["Beat-Quote 8Q %"], 40, 100), scale(m["Ø Überraschung 8Q %"], -5, 8)]),
+  };
+  const FW = {"Bewertung": .27, "Qualität": .25, "Wachstum": .23, "Bilanz": .15, "Gewinndynamik": .10};
+  let sn = 0, sd = 0; for (const [k, w] of Object.entries(FW)) if (ok(F.sub[k])) { sn += F.sub[k] * w; sd += w; }
+  F.score = sd ? sn / sd : NaN_;
+  F.cov = Object.values(m).filter(ok).length / Object.keys(m).length;
+  const S = (a, t, w) => F.sig.push([a, t, w]);
+  if (ok(F.fv.up)) S("Bewertung", `Fairer Wert ≈ ${fmt(fv)} ${F.cur} → ${F.fv.up > 0 ? "+" : ""}${fmt(F.fv.up, 0)} % Potenzial`, F.fv.up > 15 ? 1.5 : F.fv.up < -15 ? -1.5 : 0);
+  if (ok(F.dcf.implied)) S("Bewertung", `Kurs impliziert ~${fmt(F.dcf.implied, 1)} % FCF-Wachstum p. a. (Reverse-DCF)`, 0);
+  if (m["ROIC %"] > 20) S("Qualität", `Exzellente Kapitalrendite: ROIC ${fmt(m["ROIC %"], 0)} %`, 1.5); else if (m["ROIC %"] < 6) S("Qualität", `Schwache Kapitalrendite: ROIC ${fmt(m["ROIC %"], 1)} %`, -1);
+  if (ok(F.pio.score)) S("Qualität", `Piotroski F-Score ${F.pio.score}/9`, F.pio.score >= 7 ? 1 : F.pio.score <= 3 ? -1 : 0);
+  if (F.alt.zone === "Gefahrenzone") S("Bilanz", `Altman-Z ${fmt(F.alt.z)} – erhöhtes Insolvenzrisiko-Profil`, -2);
+  const ndE = m["Nettoverschuldung/EBITDA"]; if (ndE > 3) S("Bilanz", `Hohe Verschuldung: Net Debt/EBITDA ${fmt(ndE, 1)}×`, -1); else if (ndE < 0) S("Bilanz", "Netto-Cash-Position", 1);
+  const rg = m["Umsatzwachstum TTM %"]; if (ok(rg)) S("Wachstum", `Umsatzwachstum TTM ${rg > 0 ? "+" : ""}${fmt(rg, 1)} %`, rg > 10 ? 1 : rg < 0 ? -1 : 0);
+  if (ok(m["Beat-Quote 8Q %"])) S("Gewinndynamik", `Erwartungen in ${fmt(m["Beat-Quote 8Q %"], 0)} % der letzten 8 Quartale übertroffen`, m["Beat-Quote 8Q %"] >= 75 ? 1 : 0);
+  if (m["KGV (P/E)"] > 40) S("Bewertung", `Ambitioniertes KGV von ${fmt(m["KGV (P/E)"], 0)}`, -1);
+  if (m["SBC/Umsatz %"] > 8) S("Qualität", `Hohe aktienbasierte Vergütung (${fmt(m["SBC/Umsatz %"], 0)} % vom Umsatz)`, -1);
+  return F;
+}
+
+function insiderScore(ins) {
+  const data = ins?.data || []; if (!data.length) return {score: NaN_, buys: 0, sells: 0};
+  const latest = new Date(Math.max(...data.map(d => +new Date(d.transaction_date)).filter(ok))), cut = new Date(latest - 182 * 864e5);
+  let buys = 0, sells = 0, bv = 0, sv = 0;
+  for (const d of data) {
+    const t = new Date(d.transaction_date); if (!(t >= cut)) continue;
+    const p = num(d.share_price), v = num(d.shares) * p, code = String(d.acquisition_or_disposal || "").toUpperCase();
+    if (code === "P" || (code === "A" && p > 0 && !/Unit/.test(d.security_type || ""))) { buys++; bv += v || 0; }
+    else if ((code === "S" || code === "D") && p > 0) { sells++; sv += v || 0; }
+  }
+  let s = 50; if (buys) s += Math.min(35, 10 + 5 * buys); if (sv > 0 && !bv) s -= Math.min(8, 2 + sells * .3);
+  return {score: clip(s, 0, 100), buys, sells, sv};
+}
+
+function verdictOf(o) { return o >= 75 ? "STARKER KAUF" : o >= 62 ? "KAUFEN" : o >= 48 ? "HALTEN / BEOBACHTEN" : o >= 35 ? "REDUZIEREN" : "VERKAUFEN / MEIDEN"; }
+
+function tradePlan(T, fv, account, riskPct) {
+  const p = T.price, a = T.ind.atr || p * .025, sup = T.sup.map(x => x[0]), res = T.res.map(x => x[0]);
+  let lo, hi, typ;
+  if (T.trend === "Aufwärtstrend") { const c = sup.filter(s => s > p - 2 * a); lo = c.length ? Math.max(...c) : p - a; hi = (T.ind.ext ?? 0) <= 1.5 ? p : Math.max(lo, ok(T.ind.ema21) ? T.ind.ema21 : p); typ = "Pullback-Kauf im Aufwärtstrend"; }
+  else if (T.trend === "Abwärtstrend") { const tr = res.length ? res[0] : p + a; lo = tr; hi = tr + .3 * a; typ = "Nur bei Trendwende: Kauf erst über Widerstand"; }
+  else { lo = sup.length ? sup[0] : p - a; hi = p; typ = "Range: Kauf nahe Unterstützung"; }
+  const entry = (lo + hi) / 2, below = sup.filter(s => s < lo - .2 * a);
+  let stop = below.length ? below[0] - .5 * a : entry - 2 * a; stop = Math.min(stop, entry - a); stop = Math.max(stop, entry - 3 * a);
+  const risk = entry - stop, hurdles = res.filter(r => r > entry && r <= entry + risk);
+  const tg = res.filter(r => r > entry + risk).slice(0, 2);
+  if (tg.length < 2) tg.push(!tg.length ? entry + 3 * risk : Math.max(tg[tg.length - 1] + 2 * a, entry + 3 * risk));
+  if (tg.length < 2) tg.push(entry + 4 * risk);
+  if (ok(fv) && fv > tg[tg.length - 1]) tg.push(fv);
+  let shares = risk > 0 ? Math.floor(account * riskPct / 100 / risk) : 0; shares = Math.min(shares, Math.floor(account * .25 / entry));
+  return {typ, zone: [lo, hi], entry, stop, stopPct: risk / entry * 100, tg, crv: tg.map(t => (t - entry) / risk), hurdles, shares, value: shares * entry, riskAbs: shares * risk, account, riskPct, atr: a};
+}
+
+const HZ = {invest: {Fundamental: .6, Technik: .3, Sentiment: .1}, swing: {Fundamental: .25, Technik: .65, Sentiment: .1}, balanced: {Fundamental: .45, Technik: .45, Sentiment: .1}};
+function combine(D, opts) {
+  const T = technicals(D.daily, D.weekly, D.bench);
+  const F = fundamentals(D, T.price, {target: opts.target});
+  const I = insiderScore(D.insider);
+  const R = {ticker: opts.ticker, name: opts.name, hz: opts.hz, T, F, I, warn: [...D.warn], scores: {Fundamental: F.score, Technik: T.score, Sentiment: I.score}};
+  const w = HZ[opts.hz]; let n = 0, d = 0; for (const [k, v] of Object.entries(R.scores)) if (ok(v)) { n += v * w[k]; d += w[k]; }
+  R.overall = n / d;
+  let v = verdictOf(R.overall);
+  if (F.alt.zone === "Gefahrenzone" && /KAUF/.test(v)) { v = "HALTEN / BEOBACHTEN"; R.warn.push("Veto: Altman-Z in der Gefahrenzone – kein Kaufurteil trotz guter Scores."); }
+  if (T.trend === "Abwärtstrend" && v === "STARKER KAUF") { v = "KAUFEN"; R.warn.push("Herabgestuft: langfristiger Abwärtstrend – Timing abwarten."); }
+  const up = F.fv.up;
+  if (ok(up) && up < -25) {
+    if (opts.hz === "invest" && /KAUF/.test(v)) { v = "HALTEN / BEOBACHTEN"; R.warn.push(`Bewertungs-Veto: modellbasierter Fair Value liegt ${fmt(-up, 0)} % unter dem Kurs – für Anleger erst nach Rücksetzer interessant.`); }
+    else R.warn.push(`Fair Value liegt ${fmt(-up, 0)} % unter dem Kurs – Trade rein technisch begründet, enger Stop.`);
+  }
+  R.verdict = v;
+  const agree = Math.abs((ok(F.score) ? F.score : 50) - T.score);
+  R.conf = agree < 15 && (F.cov || 0) > .8 ? "hoch" : agree < 30 ? "mittel" : "niedrig";
+  if (agree >= 30 && ok(F.score)) R.warn.push(`Fundamental (${fmt(F.score, 0)}) und Technik (${fmt(T.score, 0)}) widersprechen sich deutlich.`);
+  R.plan = tradePlan(T, F.fv.fv, opts.account, opts.risk);
+  return R;
+}
+
+/* ------------------------------------------------------------ SVG-Charts */
+const W = 920;
+const pane = (x0, y0, w, h, lo, hi, n) => ({x0, y0, w, h, lo, hi, n, x: i => x0 + (i + .5) * w / n, y: v => y0 + h - (v - lo) / ((hi - lo) || 1) * h});
+const poly = (p, arr, color, wd = 1.6) => { const pts = arr.map((v, i) => ok(v) ? `${p.x(i).toFixed(1)},${p.y(v).toFixed(1)}` : null).filter(Boolean); return pts.length > 1 ? `<polyline fill="none" stroke="${color}" stroke-width="${wd}" points="${pts.join(" ")}"/>` : ""; };
+const grid = (p, k, dig) => { let s = ""; for (let i = 0; i <= k; i++) { const v = p.lo + (p.hi - p.lo) * i / k, y = p.y(v).toFixed(1); s += `<line x1="${p.x0}" x2="${p.x0 + p.w}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${p.x0 + p.w + 6}" y="${+y + 4}" fill="var(--mute)" font-size="11">${fmt(v, dig)}</text>`; } return s; };
+const xlab = (p, ds, every) => ds.map((d, i) => i % every ? "" : `<text text-anchor="${i ? "middle" : "start"}" x="${(p.x(i) - (i ? 0 : 3)).toFixed(1)}" y="${p.y0 + p.h + 15}" fill="var(--mute)" font-size="11">${d.toLocaleDateString("de-DE", {day: "2-digit", month: "2-digit", year: "2-digit"})}</text>`).join("");
+const lbl = (x, y, txt, color, anchor = "start") => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" fill="${color}" font-size="11" font-weight="600" paint-order="stroke" stroke="var(--panel)" stroke-width="3" stroke-linejoin="round">${esc(txt)}</text>`;
+
+function priceChart(D, sup, res, plan) {
+  const n = D.length, dig = D[n - 1].c > 50 ? 0 : 2;
+  let lo = Math.min(...D.map(r => Math.min(r.l, ok(r.bl) ? r.bl : r.l)), plan.stop), hi = Math.max(...D.map(r => Math.max(r.h, ok(r.bu) ? r.bu : r.h)));
+  const pad = (hi - lo) * .06; lo -= pad; hi += pad;
+  const pp = pane(10, 10, W - 80, 300, lo, hi, n), vp = pane(10, 318, W - 80, 50, 0, Math.max(...D.map(r => r.v)) * 1.05, n), rp = pane(10, 392, W - 80, 70, 0, 100, n);
+  const mv = D.flatMap(r => [r.macd, r.sig, r.hist]).filter(ok), mp = pane(10, 478, W - 80, 62, Math.min(0, ...mv) * 1.1 - 1e-9, Math.max(0, ...mv) * 1.1 + 1e-9, n);
+  let s = `<svg class="chart" viewBox="0 0 ${W} 560" role="img" aria-label="Tageschart der letzten ${n} Handelstage mit Indikatoren">` + grid(pp, 6, dig);
+  const bu = D.map((r, i) => ok(r.bu) ? [pp.x(i), pp.y(r.bu)] : null).filter(Boolean), bl = D.map((r, i) => ok(r.bl) ? [pp.x(i), pp.y(r.bl)] : null).filter(Boolean);
+  if (bu.length) s += `<polygon fill="var(--band)" points="${bu.concat(bl.reverse()).map(p => p.map(v => v.toFixed(1)).join(",")).join(" ")}"/>`;
+  for (const [l, t] of sup.slice(0, 3)) if (l > lo && l < hi) s += `<line x1="${pp.x0}" x2="${pp.x0 + pp.w}" y1="${pp.y(l)}" y2="${pp.y(l)}" stroke="var(--up)" stroke-dasharray="6 4" opacity=".8"/>` + lbl(pp.x0 + 4, pp.y(l) - 3, `S ${fmt(l)} (${t}×)`, "var(--up)");
+  for (const [l, t] of res.slice(0, 3)) if (l > lo && l < hi) s += `<line x1="${pp.x0}" x2="${pp.x0 + pp.w}" y1="${pp.y(l)}" y2="${pp.y(l)}" stroke="var(--dn)" stroke-dasharray="6 4" opacity=".8"/>` + lbl(pp.x0 + 4, pp.y(l) - 3, `R ${fmt(l)} (${t}×)`, "var(--dn)");
+  const cw = Math.max(1.5, pp.w / n * .62);
+  D.forEach((r, i) => { const col = r.c >= r.o ? "var(--up)" : "var(--dn)", x = pp.x(i), y1 = pp.y(Math.max(r.o, r.c)), y2 = pp.y(Math.min(r.o, r.c)), vh = vp.h * r.v / vp.hi;
+    s += `<line x1="${x}" x2="${x}" y1="${pp.y(r.h)}" y2="${pp.y(r.l)}" stroke="${col}"/><rect x="${x - cw / 2}" y="${y1}" width="${cw}" height="${Math.max(y2 - y1, .8)}" fill="${col}"/><rect x="${x - cw / 2}" y="${vp.y0 + vp.h - vh}" width="${cw}" height="${vh}" fill="${col}" opacity=".35"/>`; });
+  s += poly(pp, D.map(r => r.s20), "var(--c1)") + poly(pp, D.map(r => r.s50), "var(--c2)");
+  const xs = pp.x(n - 12), xe = pp.x0 + pp.w, marks = [[plan.stop, "var(--dn)", "Stop"], [plan.entry, "var(--accent)", "Einstieg"], ...plan.tg.slice(0, 2).filter(t => t > lo && t < hi).map((t, k) => [t, "var(--up)", `Ziel ${k + 1}`])];
+  const ys = marks.map(([v, c, t]) => { s += `<line x1="${xs}" x2="${xe}" y1="${pp.y(v)}" y2="${pp.y(v)}" stroke="${c}" stroke-width="2"/>`; return [pp.y(v) - 3, c, `${t} ${fmt(v)}`]; }).sort((a, b) => a[0] - b[0]);
+  for (let k = 1; k < ys.length; k++) if (ys[k][0] - ys[k - 1][0] < 13) ys[k][0] = ys[k - 1][0] + 13;
+  for (const [y, c, t] of ys) s += lbl(xs - 4, y + 4, t, c, "end");
+  s += `<text x="${rp.x0}" y="${rp.y0 - 4}" fill="var(--mute)" font-size="11">RSI 14</text>`;
+  for (const v of [30, 50, 70]) s += `<line x1="${rp.x0}" x2="${rp.x0 + rp.w}" y1="${rp.y(v)}" y2="${rp.y(v)}" stroke="var(--line)" ${v === 50 ? 'stroke-dasharray="3 3"' : ""}/><text x="${rp.x0 + rp.w + 6}" y="${rp.y(v) + 4}" fill="var(--mute)" font-size="11">${v}</text>`;
+  s += poly(rp, D.map(r => r.rsi), "var(--accent)");
+  s += `<text x="${mp.x0}" y="${mp.y0 - 4}" fill="var(--mute)" font-size="11">MACD (12/26/9)</text><line x1="${mp.x0}" x2="${mp.x0 + mp.w}" y1="${mp.y(0)}" y2="${mp.y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>`;
+  D.forEach((r, i) => { if (ok(r.hist)) { const y = mp.y(r.hist), z = mp.y(0); s += `<rect x="${mp.x(i) - cw / 2}" y="${Math.min(y, z)}" width="${cw}" height="${Math.abs(z - y)}" fill="${r.hist >= 0 ? "var(--up)" : "var(--dn)"}" opacity=".55"/>`; } });
+  s += poly(mp, D.map(r => r.macd), "var(--accent)", 1.3) + poly(mp, D.map(r => r.sig), "var(--c1)", 1.3) + xlab(mp, D.map(r => r.d), Math.max(1, Math.floor(n / 8)));
+  return s + "</svg>";
+}
+function weeklyChart(D) {
+  const n = D.length, vals = D.flatMap(r => [r.c, r.s10, r.s40]).filter(ok);
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * .06;
+  const p = pane(10, 10, W - 80, 220, lo - pad, hi + pad, n), dig = hi > 50 ? 0 : 2;
+  const pts = D.map((r, i) => `${p.x(i).toFixed(1)},${p.y(r.c).toFixed(1)}`).join(" ");
+  return `<svg class="chart" viewBox="0 0 ${W} 260" role="img" aria-label="Wochenchart mit gleitenden Durchschnitten">${grid(p, 5, dig)}<polygon fill="var(--area)" points="${p.x(0)},${p.y0 + p.h} ${pts} ${p.x(n - 1)},${p.y0 + p.h}"/>${poly(p, D.map(r => r.c), "var(--accent)", 1.8)}${poly(p, D.map(r => r.s10), "var(--c1)", 1.4)}${poly(p, D.map(r => r.s40), "var(--c2)", 1.6)}${xlab(p, D.map(r => r.d), Math.max(1, Math.floor(n / 7)))}</svg>`;
+}
+function barChart(rows) {
+  rows = rows.filter(r => ok(r.umsatz)); if (!rows.length) return "";
+  const keys = [["umsatz", "var(--accent)"], ["gewinn", "var(--c1)"], ["fcf", "var(--c2)"]], vals = rows.flatMap(r => keys.map(([k]) => r[k])).filter(ok);
+  const p = pane(10, 10, W - 80, 180, Math.min(0, ...vals), Math.max(...vals) * 1.12, rows.length), gw = p.w / rows.length * .7, bw = gw / 3;
+  let s = `<svg class="chart" viewBox="0 0 ${W} 230" role="img" aria-label="Umsatz, Gewinn und Free Cashflow je Geschäftsjahr">${grid(p, 4, 0)}`;
+  rows.forEach((r, i) => { keys.forEach(([k, c], j) => { const v = r[k]; if (!ok(v)) return; const x = p.x(i) - gw / 2 + j * bw, y = p.y(v), z = p.y(0); s += `<rect x="${x + 1}" y="${Math.min(y, z)}" width="${bw - 2}" height="${Math.abs(z - y)}" rx="2" fill="${c}"><title>${esc(r.jahr)}: ${fmt(v, 1)} Mrd.</title></rect>`; }); s += `<text text-anchor="middle" x="${p.x(i)}" y="${p.y0 + p.h + 16}" fill="var(--mute)" font-size="11">${esc(r.jahr)}</text>`; });
+  return s + "</svg>";
+}
+
+/* ------------------------------------------------------------ Rendering */
+const tone = v => !ok(v) ? "neu" : v >= 62 ? "pos" : v < 40 ? "neg" : "neu";
+const sbar = (k, v) => `<div class="sb"><span>${esc(k)}</span><b class="num">${fmt(v, 0)}</b><div class="track"><i class="${tone(v)}-bg" style="width:${ok(v) ? v : 0}%"></i></div></div>`;
+const sigs = list => `<ul class="sig">${list.map(([a, t, w]) => `<li class="${w > 0 ? "p" : w < 0 ? "n" : "o"}"><span class="tag">${esc(a)}</span>${esc(t)}</li>`).join("")}</ul>`;
+const kv = (k, v) => `<div class="kv"><span>${esc(k)}</span><b>${v}</b></div>`;
+
+let current = null;
+function render(R) {
+  current = R;
+  const {T, F, plan: p, I} = R, cur = F.cur, vt = /KAUF/.test(R.verdict) ? "pos" : /^(VERK|RED)/.test(R.verdict) ? "neg" : "neu";
+  const perf = Object.entries(T.perf).map(([k, v]) => `${k} ${fmt(v, 1, " %")}`).join(" · ");
+  const ind = T.ind;
+  let h = `<section class="panel"><div class="head"><div><div class="eyebrow">Analyse · Stand ${T.date.toLocaleDateString("de-DE")}</div><h2>${esc(R.ticker)}${R.name ? ` <span class="mute" style="font-size:16px;font-weight:500">${esc(R.name)}</span>` : ""}</h2><div class="mute num" style="font-size:12.5px">${esc(perf)}</div></div><div class="price">${fmt(T.price)} ${esc(cur)}</div></div>
+  <div class="verdict" style="margin-top:16px"><span class="badge ${vt}">${esc(R.verdict)}</span><div><div class="mute" style="font-size:12px">Gesamtscore · ${{invest: "Anleger", swing: "Swing-Trade", balanced: "ausgewogen"}[R.hz]}</div><div class="big num">${fmt(R.overall, 0)}<span class="mute" style="font-size:15px">/100</span></div><div class="mute" style="font-size:12px">Konfidenz ${esc(R.conf)}</div></div><div class="bars">${Object.entries(R.scores).map(([k, v]) => sbar(k, v)).join("")}</div></div></section>`;
+  if (R.warn.length) h += `<section class="alert"><h3>Hinweise</h3><ul style="margin:6px 0 0;padding-left:18px">${R.warn.map(w => `<li>${esc(w)}</li>`).join("")}</ul></section>`;
+  h += `<section class="panel"><h2>Trade-Plan · ${esc(p.typ)}</h2><div class="g3" style="margin-top:10px">${kv("Einstiegszone", `${fmt(p.zone[0])} – ${fmt(p.zone[1])}`)}${kv("Stop-Loss", `${fmt(p.stop)} (${fmt(p.stopPct, 1)} %)`)}${kv("Kursziele", p.tg.map(x => fmt(x)).join(" / "))}${kv("Chance/Risiko", p.crv.map(x => fmt(x, 1)).join(" / "))}${kv("Positionsgröße", `${p.shares} Stk. ≈ ${fmt(p.value, 0)} ${esc(cur)}`)}${kv("Max. Verlust", `${fmt(p.riskAbs, 0)} ${esc(cur)} (${fmt(p.riskPct, 1)} %)`)}${p.hurdles.length ? kv("Hürden vor CRV 1", p.hurdles.map(x => fmt(x)).join(" / ")) : ""}</div><p class="mute" style="font-size:12.5px;margin:10px 0 0">Stop unter Unterstützung bzw. 1–3 ATR (ATR ${fmt(p.atr)}). Positionsgröße nach festem Risiko, höchstens 25 % des Depots.</p></section>`;
+  h += `<section class="panel" id="ai"><div class="head"><h2>Analystenkommentar</h2><div class="actions"><button id="aiBtn" type="button" ${sample ? "" : "hidden"}>Kommentar von Claude schreiben</button><button id="dlBtn" type="button" ${downloads ? "" : "hidden"}>Report als Markdown speichern</button></div></div><div id="aiOut" class="notes mute" style="margin-top:8px;font-size:14px">${sample ? "Claude fasst These, Bull- und Bear-Case und eine Handlungsempfehlung auf Basis dieser Zahlen zusammen." : "Für einen Kommentar frag Claude im Chat nach „/analyse " + esc(R.ticker) + "“ – dort kommen auch aktuelle News und Analystenziele dazu."}</div></section>`;
+  if (T.series.daily) h += `<section class="panel"><h2>Tageschart</h2><div class="scroll">${priceChart(T.series.daily, T.sup, T.res, p)}</div><div class="legend"><span><i style="background:var(--c1)"></i>SMA 20</span><span><i style="background:var(--c2)"></i>SMA 50</span><span><i style="background:var(--band);height:10px"></i>Bollinger 20/2</span><span><i style="background:var(--up)"></i>Unterstützung / Ziel</span><span><i style="background:var(--dn)"></i>Widerstand / Stop</span><span><i style="background:var(--accent)"></i>Einstieg · RSI · MACD</span></div></section>`;
+  if (T.series.weekly) h += `<section class="panel"><h2>Wochenchart (3 Jahre)</h2>${weeklyChart(T.series.weekly)}<div class="legend"><span><i style="background:var(--accent)"></i>Schlusskurs</span><span><i style="background:var(--c1)"></i>SMA 10 Wochen</span><span><i style="background:var(--c2)"></i>SMA 40 Wochen (≈200 Tage)</span></div></section>`;
+  h += `<div class="g2"><section class="panel"><h2>Charttechnik · ${fmt(T.score, 0)}/100 · ${esc(T.trend)}</h2><div class="bars" style="margin-top:10px">${Object.entries(T.sub).map(([k, v]) => sbar(k, v)).join("")}</div><h3 style="margin-top:14px">Signale</h3>${sigs(T.sig)}</section>
+  <section class="panel"><h2>Fundamental · ${fmt(F.score, 0)}/100</h2><div class="bars" style="margin-top:10px">${Object.entries(F.sub).map(([k, v]) => sbar(k, v)).join("")}</div><h3 style="margin-top:14px">Signale</h3>${sigs(F.sig)}</section></div>`;
+  const trows = [["RSI 14 Tag / Woche", `${fmt(ind.rsi14, 0)} / ${fmt(ind.rsi14w, 0)}`], ["SMA 20 / 50", `${fmt(ind.sma20)} / ${fmt(ind.sma50)}`], ["SMA 40 Wochen (≈200 T)", fmt(ind.sma40w)], ["MACD-Histogramm", fmt(ind.macdHist)], ["ADX 14", fmt(ind.adx, 0)], ["ATR 14", `${fmt(ind.atr)} (${fmt(ind.atrPct, 1)} %)`], ["Stochastik %K / %D", `${fmt(ind.stK, 0)} / ${fmt(ind.stD, 0)}`], ["52W Hoch / Tief", `${fmt(ind.high52)} / ${fmt(ind.low52)}`], ["Abstand 52W-Hoch", fmt(ind.dist52, 1, " %")], ["Unterstützungen", T.sup.slice(0, 3).map(x => fmt(x[0])).join(", ") || "–"], ["Widerstände", T.res.slice(0, 3).map(x => fmt(x[0])).join(", ") || "–"]];
+  if (ok(ind.rs3)) trows.push(["Rel. Stärke 3M / 6M (PP)", `${fmt(ind.rs3, 1)} / ${fmt(ind.rs6, 1)}`]);
+  trows.push(["Insider (6 Monate)", ok(I.score) ? `${I.buys} Käufe / ${I.sells} Verkäufe` : "keine Daten"]);
+  h += `<div class="g2"><section class="panel"><h2>Technische Kennzahlen</h2>${trows.map(([a, b]) => kv(a, b)).join("")}</section><section class="panel"><h2>Fundamentale Kennzahlen</h2>${Object.entries(F.m).map(([k, v]) => kv(k, fmt(v))).join("")}${kv("Piotroski F-Score", ok(F.pio.score) ? F.pio.score + "/9" : "–")}${kv("Altman Z-Score", `${fmt(F.alt.z)} (${esc(F.alt.zone)})`)}</section></div>`;
+  if (F.dcf) h += `<section class="panel"><h2>Bewertung</h2><div class="g2" style="margin-top:10px"><div class="scroll"><table><thead><tr><th>DCF-Szenario</th><th>Wachstum</th><th>WACC</th><th>Wert/Aktie</th><th>vs. Kurs</th></tr></thead><tbody>${Object.entries(F.dcf.sc).map(([k, v]) => `<tr><td>${k}</td><td>${fmt(v.g, 1, " %")}</td><td>${fmt(v.w, 1, " %")}</td><td>${fmt(v.v)}</td><td>${fmt(ok(v.v) ? (v.v / T.price - 1) * 100 : NaN_, 0, " %")}</td></tr>`).join("")}</tbody></table><p class="mute" style="font-size:12.5px">FCF-Basis ${fmt(F.dcf.fcf)} Mrd. ${esc(cur)}${F.dcf.sbc ? " nach Abzug aktienbasierter Vergütung" : ""}, 10 Jahre abnehmendes Wachstum, danach 2,5 %. Reverse-DCF: Der Kurs unterstellt ${fmt(F.dcf.implied, 1)} % Anfangswachstum.</p></div><div>${Object.entries(F.fv.comps).map(([k, v]) => kv(k, fmt(v))).join("")}${kv("Faires KGV (wachstumsbereinigt)", fmt(F.fv.fairPE, 1))}${kv("Fair Value (gewichtet)", `${fmt(F.fv.fv)} ${esc(cur)}`)}${kv("Potenzial", fmt(F.fv.up, 0, " %"))}</div></div></section>`;
+  if (F.hist.length) h += `<section class="panel"><h2>Umsatz, Gewinn &amp; Free Cashflow (Mrd. ${esc(cur)})</h2>${barChart(F.hist)}<div class="legend"><span><i style="background:var(--accent)"></i>Umsatz</span><span><i style="background:var(--c1)"></i>Nettogewinn</span><span><i style="background:var(--c2)"></i>Free Cashflow</span></div></section>`;
+  $("#out").innerHTML = h;
+  $("#aiBtn")?.addEventListener("click", writeComment);
+  $("#dlBtn")?.addEventListener("click", saveMd);
+}
+
+function summaryForAI(R) {
+  const r = v => ok(v) ? Math.round(v * 100) / 100 : null, o = obj => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, typeof v === "number" ? r(v) : v]));
+  return {ticker: R.ticker, name: R.name, horizont: R.hz, kurs: r(R.T.price), datum: R.T.date.toISOString().slice(0, 10), waehrung: R.F.cur, urteil: R.verdict, gesamt: r(R.overall), scores: o(R.scores), hinweise: R.warn,
+    technik: {trend: R.T.trend, teilscores: o(R.T.sub), indikatoren: o(R.T.ind), performance: o(R.T.perf), unterstuetzungen: R.T.sup.map(x => r(x[0])), widerstaende: R.T.res.map(x => r(x[0])), signale: R.T.sig.map(x => x[1])},
+    fundamental: {teilscores: o(R.F.sub), kennzahlen: o(R.F.m), piotroski: R.F.pio.score, altman: r(R.F.alt.z), fair_value: r(R.F.fv.fv), potenzial: r(R.F.fv.up), impliziertes_wachstum: r(R.F.dcf?.implied), signale: R.F.sig.map(x => x[1])},
+    plan: {setup: R.plan.typ, zone: R.plan.zone.map(r), stop: r(R.plan.stop), ziele: R.plan.tg.map(r), crv: R.plan.crv.map(r), stueck: R.plan.shares}, insider: R.I};
+}
+function md2html(md) {
+  const inline = x => esc(x).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  let out = "", inList = false;
+  for (const line of md.split(/\n/)) {
+    const hm = line.match(/^(#{1,4})\s+(.*)/), li = line.match(/^\s*[-*]\s+(.*)/);
+    if (li) { if (!inList) { out += "<ul>"; inList = true; } out += `<li>${inline(li[1])}</li>`; continue; }
+    if (inList) { out += "</ul>"; inList = false; }
+    if (hm) out += `<h${Math.min(hm[1].length + 2, 4)}>${inline(hm[2])}</h${Math.min(hm[1].length + 2, 4)}>`; else if (line.trim()) out += `<p>${inline(line)}</p>`;
+  }
+  return out + (inList ? "</ul>" : "");
+}
+let aiText = "";
+async function writeComment() {
+  const btn = $("#aiBtn"), box = $("#aiOut"); btn.disabled = true; box.classList.remove("mute"); box.textContent = "Claude schreibt …";
+  const prompt = `Du bist Tradebuddy, ein disziplinierter Buy-Side-Aktienanalyst. Schreibe auf Deutsch einen prägnanten Analystenkommentar (max. 350 Wörter) in Markdown mit genau diesen Abschnitten:
+## These in 3 Sätzen
+## Bull-Case (3 Punkte)
+## Bear-Case (3 Punkte)
+## Charttechnisches Bild (Trend, Schlüsselmarken, was das Setup bestätigt oder negiert)
+## Fazit & Handlungsempfehlung (passend zum Horizont, inkl. Bedingung, unter der die These falsch wäre)
+Regeln: Verwende NUR Zahlen aus den Daten unten, erfinde keine News, Produkte oder Analystenziele. Sprich Widersprüche zwischen Fundamental und Technik offen an. Keine Garantien. Zahlen im deutschen Format.
+Daten (JSON):
+${JSON.stringify(summaryForAI(current))}`;
+  try {
+    const res = await sample(prompt, {modelTier: "default", onText: ({text}) => { aiText = text; box.innerHTML = md2html(text); }});
+    aiText = res.text; box.innerHTML = md2html(res.text);
+  } catch (e) {
+    box.classList.add("mute");
+    box.textContent = e?.code === "not_granted" ? "Der Kommentar braucht deine Zustimmung, Claude zu fragen. Du kannst sie über das Berechtigungsmenü des Artifacts erteilen." : e?.code === "rate_limited" ? "Gerade zu viele Anfragen. Versuch es in einer Minute noch einmal." : "Der Kommentar konnte nicht erstellt werden: " + (e?.message || "unbekannter Fehler");
+  } finally { btn.disabled = false; }
+}
+async function saveMd() {
+  const R = current, p = R.plan;
+  const md = [`# Tradebuddy: ${R.ticker}${R.name ? " – " + R.name : ""} (${R.T.date.toLocaleDateString("de-DE")})`, "", `**Urteil: ${R.verdict}** · Gesamtscore ${fmt(R.overall, 0)}/100 · Konfidenz ${R.conf}`, `Kurs ${fmt(R.T.price)} ${R.F.cur} · ` + Object.entries(R.scores).map(([k, v]) => `${k} ${fmt(v, 0)}`).join(" · "), "", ...R.warn.map(w => `> ${w}`), "", "## Trade-Plan", `- Setup: ${p.typ}`, `- Einstieg: ${fmt(p.zone[0])} – ${fmt(p.zone[1])}`, `- Stop: ${fmt(p.stop)} (${fmt(p.stopPct, 1)} %)`, `- Ziele: ${p.tg.map(x => fmt(x)).join(" / ")} (CRV ${p.crv.map(x => fmt(x, 1)).join(" / ")})`, `- Position: ${p.shares} Stk.`, "", aiText ? "## Analystenkommentar\n" + aiText : "", "", `## Charttechnik (${fmt(R.T.score, 0)}/100, ${R.T.trend})`, ...R.T.sig.map(s => `- ${s[1]}`), "", `## Fundamental (${fmt(R.F.score, 0)}/100)`, ...R.F.sig.map(s => `- ${s[1]}`), "", "| Kennzahl | Wert |", "|---|---|", ...Object.entries(R.F.m).map(([k, v]) => `| ${k} | ${fmt(v)} |`), "", "_Keine Anlageberatung._"].join("\n");
+  try { await downloads.save({filename: `Tradebuddy_${R.ticker}_${R.T.date.toISOString().slice(0, 10)}.md`, data: md}); } catch { /* Viewer hat abgelehnt */ }
+}
+
+/* ------------------------------------------------------------ Ablauf */
+const STEPS = [
+  ["daily", "Tageskurse", "TIME_SERIES_DAILY", t => ({symbol: t, outputsize: "compact", datatype: "csv"}), true],
+  ["weekly", "Wochenkurse", "TIME_SERIES_WEEKLY", t => ({symbol: t, datatype: "csv"}), true],
+  ["bench", "S&P 500 (SPY)", "TIME_SERIES_WEEKLY", () => ({symbol: "SPY", datatype: "csv"}), false],
+  ["income", "Gewinn & Verlust", "INCOME_STATEMENT", t => ({symbol: t}), false],
+  ["balance", "Bilanz", "BALANCE_SHEET", t => ({symbol: t}), false],
+  ["cashflow", "Cashflow", "CASH_FLOW", t => ({symbol: t}), false],
+  ["earnings", "Quartalszahlen", "EARNINGS", t => ({symbol: t}), false],
+  ["insider", "Insider", "INSIDER_TRANSACTIONS", t => ({symbol: t, from_date: new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10)}), false],
+];
+function setStep(id, cls, text) { const el = document.getElementById("st-" + id); if (el) { el.className = "step " + cls; el.lastElementChild.textContent = text; el.title = text; } }
+function message(html, info) { $("#msg").innerHTML = html ? `<div class="alert ${info ? "info" : ""}">${html}</div>` : ""; }
+
+async function resolveTicker(q) {
+  if (/^[A-Z0-9.\-]{1,10}$/.test(q) && !/\s/.test(q)) return {ticker: q, name: ""};
+  const r = await av("SYMBOL_SEARCH", {keywords: q});
+  const m = (r.data?.bestMatches || []).find(x => /Equity/i.test(x["3. type"] || "")) || (r.data?.bestMatches || [])[0];
+  if (!m) throw new StepError("notfound", `Kein Wertpapier zu „${q}“ gefunden.`);
+  return {ticker: m["1. symbol"], name: m["2. name"]};
+}
+
+function errText(e) {
+  const c = e?.code;
+  if (c === "server_not_connected" || c === "selection_required") return `Der Alpha-Vantage-Connector ist für dich nicht verbunden. Füge ihn unter claude.ai → Einstellungen → Connectors hinzu.`;
+  if (c === "needs_reauth") return "Der Alpha-Vantage-Connector muss neu verbunden werden: claude.ai → Einstellungen → Connectors.";
+  if (c === "not_in_manifest" || c === "approval_required" || c === "consent_required") return "Tradebuddy darf den Alpha-Vantage-Connector noch nicht nutzen. Erlaube den Zugriff, wenn claude.ai danach fragt, und starte die Analyse erneut.";
+  if (c === "quota") return "Das kostenlose Tageskontingent von Alpha Vantage (25 Abrufe) ist aufgebraucht. Morgen geht es weiter; bereits geladene Werte bleiben 20 Stunden abrufbar.";
+  if (c === "premium") return "Dieser Datenabruf ist bei Alpha Vantage kostenpflichtig.";
+  if (c === "server_unavailable") return "Alpha Vantage antwortet gerade nicht. Versuch es in einer Minute noch einmal.";
+  return e?.message || "Unbekannter Fehler";
+}
+
+async function run(evt) {
+  evt?.preventDefault();
+  const q = $("#q").value.trim().toUpperCase(); if (!q) return;
+  message("");
+  await Promise.race([mcpReady, sleep(10500)]);
+  if (!mcp) { message("Diese Ansicht kann keine Connectoren nutzen. Öffne Tradebuddy auf claude.ai, um live zu analysieren."); return; }
+  $("#go").disabled = true; $("#empty").hidden = true; $("#out").innerHTML = "";
+  $("#progress").hidden = false; $("#ptitle").textContent = "Daten werden geladen";
+  $("#steps").innerHTML = STEPS.map(([id, name]) => `<div class="step" id="st-${id}"><span class="dot"></span><span>${name}</span></div>`).join("");
+  const D = {warn: []};
+  try {
+    const {ticker, name} = await resolveTicker(q);
+    $("#ptitle").textContent = `Daten für ${ticker} werden geladen`;
+    let quotaHit = false;
+    for (const [id, nm, tool, args, required] of STEPS) {
+      if (quotaHit) { setStep(id, "skip", nm + " – übersprungen"); continue; }
+      setStep(id, "run", nm + " …");
+      try {
+        let r;
+        try { r = await av(tool, args(ticker)); }
+        catch (e) { if (e?.retryable) { await sleep(1500 + Math.random() * 1000); r = await av(tool, args(ticker)); } else throw e; }
+        if (id === "daily" || id === "weekly" || id === "bench") D[id] = series(r.data);
+        else if (["income", "balance", "cashflow"].includes(id)) D[id] = statements(r.data);
+        else D[id] = r.data;
+        setStep(id, "ok", nm + (r.cached ? " (Cache)" : ""));
+        if (!r.cached) await sleep(1150);
+      } catch (e) {
+        if (e?.code === "quota") quotaHit = true;
+        if (required && !(id === "daily" && D.weekly)) { setStep(id, "err", nm + " – Fehler"); if (id === "weekly" && D.daily) { D.warn.push("Datenlücke: Wochenkurse fehlen – Langfristtrend nicht bewertbar."); continue; } if (id === "daily") { setStep(id, "err", nm + " – Fehler"); D.warn.push("Datenlücke: Tageskurse fehlen."); continue; } throw e; }
+        setStep(id, e?.code === "premium" ? "skip" : "err", nm + " – " + (e?.code === "premium" ? "Premium" : e?.code === "quota" ? "Limit erreicht" : "nicht verfügbar"));
+        if (id !== "bench" && id !== "insider") D.warn.push(`Datenlücke: ${nm} nicht verfügbar (${errText(e).replace(/\.$/, "")}).`);
+      }
+    }
+    if (!D.daily && !D.weekly) throw new StepError("av", "Keine Kursdaten erhalten. Prüfe den Ticker (US-Werte direkt, z. B. MSFT; deutsche Werte über das US-Listing bzw. ADR oder mit Endung .DEX).");
+    if (!D.daily) D.warn.push("Datenlücke: Tageskurse fehlen – Timing-Signale eingeschränkt.");
+    const R = combine(D, {ticker, name, hz: $("#hz").value, account: +$("#acc").value || 10000, risk: +$("#risk").value || 1});
+    render(R);
+    $("#ptitle").textContent = `Analyse für ${ticker} fertig`;
+    remember(ticker);
+  } catch (e) {
+    $("#ptitle").textContent = "Analyse nicht möglich";
+    message(esc(errText(e)));
+    if (!$("#out").innerHTML) $("#empty").hidden = false;
+  } finally { $("#go").disabled = false; }
+}
+
+function recent() { try { return JSON.parse(localStorage.getItem("tb-recent") || "[]"); } catch { return []; } }
+function remember(t) { try { localStorage.setItem("tb-recent", JSON.stringify([t, ...recent().filter(x => x !== t)].slice(0, 8))); } catch {} showRecent(); }
+function showRecent() { const r = recent(); $("#recent").innerHTML = r.length ? `<span class="hint">Zuletzt:</span>` + r.map(t => `<button type="button" class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join("") : ""; }
+document.addEventListener("click", e => { const t = e.target.closest?.("[data-t]"); if (t) { $("#q").value = t.dataset.t; run(); } });
+$("#f").addEventListener("submit", run);
+showRecent();
+</script>

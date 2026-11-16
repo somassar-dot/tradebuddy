@@ -56,6 +56,7 @@ Weitere Optionen: `--wacc 0.10`, `--notes kommentar.md`, `--extra '{"growth_over
 tradebuddy/        Engine (loader, technicals, fundamentals, sentiment, analysis, charts, report, cli)
 .claude/skills/    Skill "tradebuddy" – der komplette Analysten-Workflow für Claude
 .claude/commands/  /analyse, /watchlist
+app/              Tradebuddy-App: Eingabefeld für jeden Ticker, läuft als claude.ai-Artifact über den Alpha-Vantage-Connector
 data/<TICKER>/     Rohdaten (daily.csv, weekly.csv, income.json, …)
 reports/           Erzeugte Reports (.html/.md/.json) + Analystenkommentare
 tests/             python3 tests/test_engine.py
