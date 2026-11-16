@@ -1,0 +1,307 @@
+{
+  "ticker": "AAPL",
+  "name": "Apple Inc.",
+  "datum": "2026-11-13",
+  "kurs": 356.27,
+  "währung": "USD",
+  "horizont": "invest",
+  "gesamt": 65.3,
+  "urteil": "HALTEN / BEOBACHTEN",
+  "konfidenz": "hoch",
+  "scores": {
+    "Fundamental": 63.3,
+    "Technik": 77.1,
+    "Sentiment": 42.0
+  },
+  "technik": {
+    "score": 77.1,
+    "trend": "Aufwärtstrend",
+    "teilscores": {
+      "Langfristtrend": 85,
+      "Mittelfristtrend": 98,
+      "Momentum": 68.0,
+      "Volumen": 44.9768,
+      "Struktur": 55.0,
+      "Relative Stärke": 91.384
+    },
+    "indikatoren": {
+      "sma10w": 341.4255,
+      "sma40w": 302.5896,
+      "sma40w_slope_4w_pct": 2.9763,
+      "rsi14w": 68.5162,
+      "macd_w_hist": 0.7117,
+      "high_52w": 360.83,
+      "low_52w": 243.42,
+      "dist_52w_high_pct": -1.2638,
+      "pos_in_52w_range_pct": 96.1162,
+      "sma20": 346.1503,
+      "sma50": 339.0363,
+      "ema21": 346.2686,
+      "rsi14": 60.7127,
+      "macd": 4.1826,
+      "macd_signal": 3.2939,
+      "macd_hist": 0.8887,
+      "bb_upper": 357.7755,
+      "bb_lower": 334.525,
+      "atr14": 8.2219,
+      "atr_pct": 2.3078,
+      "adx14": 18.9454,
+      "plus_di": 30.9565,
+      "minus_di": 17.6909,
+      "stoch_k": 87.1549,
+      "stoch_d": 91.0177,
+      "vol_ratio": 0.8479,
+      "up_down_volume": 0.9994,
+      "ext_ema21_atr": 1.2516,
+      "dist_support_atr": 0.5522,
+      "rel_strength_3m_pp": 19.2847,
+      "rel_strength_6m_pp": 16.6093
+    },
+    "performance": {
+      "1M": 3.7297,
+      "3M": 16.4547,
+      "6M": 18.6657,
+      "1J": 30.7845,
+      "3J": 87.817,
+      "YTD": 30.3109,
+      "1W": 4.0599
+    },
+    "unterstützungen": [
+      [
+        351.73,
+        1
+      ],
+      [
+        345.66,
+        4
+      ],
+      [
+        336.85,
+        2
+      ],
+      [
+        325.57,
+        2
+      ],
+      [
+        319.01,
+        3
+      ]
+    ],
+    "widerstände": [
+      [
+        360.83,
+        1
+      ]
+    ],
+    "signale": [
+      [
+        "Trend",
+        "Langfristiger Aufwärtstrend: Kurs > SMA10w > SMA40w (≈200-Tage-Linie), SMA40w steigt",
+        2
+      ],
+      [
+        "Struktur",
+        "Notiert nahe 52-Wochen-Hoch – relative Stärke",
+        1
+      ],
+      [
+        "Trend",
+        "Kurzfristig intakt: Kurs > SMA20 > SMA50",
+        1
+      ],
+      [
+        "Momentum",
+        "RSI 61 – bullische Zone",
+        0.5
+      ],
+      [
+        "Momentum",
+        "MACD-Kaufsignal (Kreuzung über Signallinie) in den letzten 5 Tagen",
+        1
+      ],
+      [
+        "Momentum",
+        "Bärische RSI-Divergenz (höheres Hoch im Kurs, tieferes Hoch im RSI)",
+        -1.5
+      ],
+      [
+        "Struktur",
+        "Kurs direkt an Unterstützung 351.73 (enges Stop-Risiko)",
+        0.5
+      ],
+      [
+        "Rel. Stärke",
+        "Outperformance vs. Benchmark: +19.3 PP (3M), +16.6 PP (6M)",
+        1
+      ]
+    ]
+  },
+  "fundamental": {
+    "score": 63.3,
+    "teilscores": {
+      "Bewertung": 15.7335,
+      "Qualität": 88.6801,
+      "Wachstum": 68.8717,
+      "Bilanz": 81.7105,
+      "Gewinndynamik": 88.3093
+    },
+    "kennzahlen": {
+      "Kurs": 356.27,
+      "Aktien (Mio.)": 14630.318,
+      "Marktkapitalisierung (Mrd.)": 5212.3434,
+      "Enterprise Value (Mrd.)": 5235.7324,
+      "Nettoverschuldung (Mrd.)": 23.389,
+      "Umsatz TTM (Mrd.)": 478.834,
+      "Nettogewinn TTM (Mrd.)": 132.175,
+      "Free Cashflow TTM (Mrd.)": 136.056,
+      "EPS TTM": 9.0343,
+      "KGV (P/E)": 39.4352,
+      "KUV (P/S)": 10.8855,
+      "KBV (P/B)": 46.5002,
+      "EV/EBITDA": 30.3239,
+      "EV/Umsatz": 10.9343,
+      "FCF-Rendite %": 2.6103,
+      "Dividendenrendite %": 0.3016,
+      "Aktionärsrendite % (Div.+Rückkauf)": 1.959,
+      "Bruttomarge %": 48.7856,
+      "Operative Marge %": 33.01,
+      "Nettomarge %": 27.6035,
+      "FCF-Marge %": 28.414,
+      "ROE %": 142.2567,
+      "ROA %": 32.6723,
+      "ROIC %": 97.5591,
+      "Cash Conversion (OCF/NI)": 1.0978,
+      "SBC/Umsatz %": 2.8797,
+      "Umsatzwachstum TTM %": 15.0598,
+      "Gewinnwachstum TTM %": 18.0029,
+      "FCF-Wachstum TTM %": 37.7545,
+      "Nettoverschuldung/EBITDA": 0.1355,
+      "Verschuldungsgrad (D/E)": 0.7147,
+      "Current Ratio": 1.0232,
+      "Zinsdeckung (EBIT/Zins)": 99.0,
+      "Langfr. Finanzanlagen (Mrd.)": 80.213,
+      "Umsatz-CAGR 3J %": 7.7013,
+      "EPS-CAGR 3J %": 13.3804,
+      "Umsatz letztes Quartal YoY %": 11.7219,
+      "PEG": 2.9472,
+      "Op.-Margen-Trend 3J (PP)": 3.1886,
+      "Beat-Quote 8Q %": 100.0,
+      "Ø Überraschung 8Q %": 4.9604
+    },
+    "piotroski": 9,
+    "altman": {
+      "z": 13.24,
+      "zone": "sicher"
+    },
+    "dcf": {
+      "fcf_basis_mrd": 122.267,
+      "wacc": 0.09,
+      "terminal": 0.025,
+      "sbc_abgezogen": true,
+      "szenarien": {
+        "Bär": {
+          "wachstum_%": 7.0472,
+          "wacc_%": 10.0,
+          "wert_je_aktie": 135.7501
+        },
+        "Basis": {
+          "wachstum_%": 12.0472,
+          "wacc_%": 9.0,
+          "wert_je_aktie": 193.3605
+        },
+        "Bulle": {
+          "wachstum_%": 16.0472,
+          "wacc_%": 8.5,
+          "wert_je_aktie": 247.5571
+        }
+      },
+      "impliziertes_wachstum_%": 27.6076
+    },
+    "fair_value": {
+      "komponenten": {
+        "DCF (Basis)": 193.3605,
+        "Faires KGV": 258.1154,
+        "Analysten-Kursziel": 336.0
+      },
+      "faires_kgv": 28.5705,
+      "fair_value": 241.3149,
+      "upside_%": -32.2663
+    },
+    "signale": [
+      [
+        "Bewertung",
+        "Fairer Wert ≈ 241.31 USD → -32% Potenzial",
+        -1.5
+      ],
+      [
+        "Bewertung",
+        "Kurs impliziert ~27.6% FCF-Wachstum p.a. (Reverse-DCF)",
+        0
+      ],
+      [
+        "Qualität",
+        "Exzellente Kapitalrendite: ROIC 98%",
+        1.5
+      ],
+      [
+        "Qualität",
+        "Piotroski F-Score 9/9",
+        1
+      ],
+      [
+        "Wachstum",
+        "Umsatzwachstum TTM +15.1%",
+        1
+      ],
+      [
+        "Gewinndynamik",
+        "Erwartungen in 100% der letzten 8 Quartale übertroffen",
+        1
+      ]
+    ]
+  },
+  "news": {
+    "score": null,
+    "artikel": 0,
+    "top": []
+  },
+  "insider": {
+    "score": 42.0,
+    "käufe": 0,
+    "verkäufe": 20,
+    "kaufvolumen": 0.0,
+    "verkaufsvolumen": 112657235.32,
+    "monate": 6
+  },
+  "plan": {
+    "setup": "Pullback-Kauf im Aufwärtstrend",
+    "einstieg_zone": [
+      351.73,
+      356.27
+    ],
+    "einstieg": 354.0,
+    "stop": 341.55,
+    "stop_abstand_%": 3.52,
+    "ziele": [
+      391.35,
+      403.8
+    ],
+    "crv": [
+      3.0,
+      4.0
+    ],
+    "stück": 7,
+    "positionswert": 2478.0,
+    "risiko_eur": 87.16,
+    "hürden": [
+      360.83
+    ],
+    "konto": 10000,
+    "risiko_%": 1.0,
+    "atr": 8.22
+  },
+  "warnungen": [
+    "Bewertungs-Veto: modellbasierter Fair Value liegt 32% unter dem Kurs – für Anleger erst nach Rücksetzer interessant."
+  ]
+}
